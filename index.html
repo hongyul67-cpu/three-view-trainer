@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3면도 트레이너 — 정투상 도형 실습</title>
+<style>
+  :root{
+    --bg:#0b2540; --bg-deep:#081b30; --panel:#123459; --panel-light:#1c4474;
+    --text:#eaf4ff; --text-dim:#9fc1e0; --accent:#ffb454;
+    --correct:#5fd86f; --wrong:#ff6b6b; --grid:rgba(234,244,255,0.06);
+    --paper:#f4efe0; --ink:#1c3247; --material:#e7dec6; --hidden:#7f93a8;
+    --link:#5bc8de;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; color:var(--text); min-height:100vh; padding:18px 14px 70px;
+    font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',-apple-system,sans-serif;
+    background:
+      linear-gradient(var(--grid) 1px, transparent 1px) 0 0/40px 40px,
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0/40px 40px,
+      var(--bg);
+  }
+  .wrap{max-width:860px;margin:0 auto}
+  .eyebrow{font-size:.74rem;letter-spacing:.18em;color:var(--accent);text-transform:uppercase;font-weight:700;margin-bottom:6px}
+  h1{font-size:1.5rem;margin:0 0 4px;letter-spacing:.02em}
+  .subtitle{color:var(--text-dim);font-size:.94rem;margin-bottom:16px;line-height:1.5}
+  .panel{background:var(--panel);border:1px solid rgba(234,244,255,.12);border-radius:14px;padding:20px;margin-bottom:16px}
+
+  .tabs{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px}
+  .tab{flex:1 1 128px;background:transparent;border:1px solid rgba(234,244,255,.22);color:var(--text-dim);
+       padding:11px 8px;border-radius:9px;cursor:pointer;font-size:.86rem;font-weight:700;font-family:inherit;transition:.15s}
+  .tab:hover{border-color:var(--accent);color:var(--text)}
+  .tab[aria-pressed="true"]{background:var(--accent);color:#1a1306;border-color:var(--accent)}
+
+  .paperwrap{background:var(--paper);border-radius:12px;padding:14px 12px 12px;position:relative}
+  .paperwrap .cap{position:absolute;top:9px;left:13px;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.1em;color:#5b7286}
+  canvas{display:block;width:100%}
+  #layoutCv{height:340px}
+  @media(max-width:560px){#layoutCv{height:290px}}
+
+  .row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;background:#0f2032;border:1px solid rgba(234,244,255,.14);
+       border-radius:10px;padding:9px 11px;margin-bottom:12px}
+  .row .lab{font-size:.72rem;color:var(--text-dim);letter-spacing:.08em;flex:none}
+  .seg{display:flex;gap:5px}
+  .segBtn{background:transparent;border:1px solid rgba(234,244,255,.24);color:var(--text);padding:8px 12px;
+          border-radius:7px;cursor:pointer;font-weight:700;font-size:.8rem;font-family:inherit}
+  .segBtn[aria-pressed="true"]{background:var(--link);color:#04121c;border-color:var(--link)}
+  .hintline{flex-basis:100%;font-size:.78rem;color:var(--text-dim);line-height:1.45}
+  .hintline b{color:var(--accent)}
+
+  .btn{appearance:none;border:none;border-radius:10px;background:var(--accent);color:#1a1306;font-weight:800;
+       font-size:.95rem;padding:13px 20px;cursor:pointer;min-height:50px;font-family:inherit}
+  .btn:hover{filter:brightness(1.07)}
+  .btn.ghost{background:transparent;border:1px solid rgba(234,244,255,.3);color:var(--text)}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btnrow{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+
+  .prompt{font-size:1.02rem;margin:14px 0 11px;line-height:1.55}
+  .prompt b{color:var(--accent)}
+  .choices{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:560px){.choices{grid-template-columns:1fr 1fr}}
+  .choice{background:var(--paper);border:3px solid transparent;border-radius:11px;padding:8px 6px 6px;cursor:pointer;
+          display:flex;flex-direction:column;align-items:center;gap:4px;font-family:inherit}
+  .choice .num{font-size:.76rem;font-weight:800;color:#5b7286;align-self:flex-start;margin-left:4px}
+  .choice canvas{width:100%;height:118px}
+  .choice:hover:not(:disabled){border-color:var(--link)}
+  .choice.sel{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,180,84,.3)}
+  .choice.correct{border-color:var(--correct);background:#e3f5ec}
+  .choice.wrong{border-color:var(--wrong);background:#fbecea}
+  .choice:disabled{cursor:default}
+
+  .scorebar{display:flex;gap:16px;flex-wrap:wrap;font-size:.88rem;color:var(--text-dim);margin-top:13px}
+  .scorebar b{color:var(--text)}
+  .pill{background:var(--panel-light);border-radius:20px;padding:4px 13px;font-size:.82rem;color:var(--accent);font-weight:800}
+  .toast{font-size:.93rem;font-weight:700;min-height:22px;margin-top:10px;line-height:1.5}
+  .toast.ok{color:var(--correct)} .toast.no{color:var(--wrong)} .toast.go{color:var(--accent)}
+  .explain{background:rgba(91,200,222,.09);border-left:3px solid var(--link);border-radius:0 8px 8px 0;
+           padding:10px 13px;margin-top:11px;font-size:.87rem;color:var(--text-dim);line-height:1.6}
+  .explain b{color:var(--link)}
+
+  .legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.76rem;color:var(--text-dim);margin-top:9px;align-items:center}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{display:inline-block;width:20px;flex:none}
+  .legend i.solid{height:0;border-top:3px solid #1c3247}
+  .legend i.dash{height:0;border-top:2px dashed #7f93a8}
+  .legend i.mat{height:11px;background:var(--material);border:1px solid #1c3247}
+
+  /* 휴대폰: 터치 영역·보기 크기 확보 */
+  @media (max-width:560px){
+    body{padding:14px 10px 60px}
+    .panel{padding:15px}
+    .segBtn{padding:11px 13px;font-size:.84rem}
+    .tab{padding:12px 8px}
+    .choice canvas{height:132px}
+    #isoCv{height:190px}
+    .prompt{font-size:.97rem}
+  }
+  .hidden{display:none !important}
+  .links{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+  .links a{color:var(--link);text-decoration:none;font-size:.83rem;border:1px solid rgba(91,200,222,.4);
+           padding:7px 12px;border-radius:8px}
+  .links a:hover{background:rgba(91,200,222,.12)}
+  footer{max-width:860px;margin:14px auto 0;color:var(--text-dim);font-size:.8rem;line-height:1.6;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">3-View Trainer · 정투상 실습</div>
+  <h1>3면도 트레이너</h1>
+  <p class="subtitle">입체를 세 방향에서 본 <b>정면도·평면도·우측면도</b>를 그려보고, 거꾸로 <b>도면만 보고 입체를 읽어내는</b> 실습을 합니다.<br><span style="font-size:.86rem">용어·투상법 종류가 아직 헷갈리면 <a href="https://hongyul67-cpu.github.io/tusang-master/" style="color:var(--link)">투상도 마스터(개념편)</a>을 먼저 하세요.</span></p>
+
+  <div class="tabs" role="group" aria-label="모드 선택">
+    <button class="tab" id="tabLearn" aria-pressed="true">📖 배우기</button>
+    <button class="tab" id="tabToSolid" aria-pressed="false">도전 ① 도면→입체</button>
+    <button class="tab" id="tabToView" aria-pressed="false">도전 ② 입체→투상도</button>
+    <button class="tab" id="tabAngle" aria-pressed="false">도전 ③ 각법 구분</button>
+    <button class="tab" id="tabExam" aria-pressed="false">🎯 종합시험</button>
+  </div>
+
+  <!-- ================= 배우기 ================= -->
+  <section id="secLearn">
+    <div class="panel">
+      <div class="row">
+        <span class="lab">투상법</span>
+        <div class="seg" id="methodSeg">
+          <button class="segBtn" data-m="third" aria-pressed="true">제3각법 (KS 표준)</button>
+          <button class="segBtn" data-m="first" aria-pressed="false">제1각법</button>
+        </div>
+        <span class="hintline" id="methodHint"></span>
+      </div>
+
+      <div class="paperwrap">
+        <span class="cap" id="layoutCap">제3각법 배치</span>
+        <canvas id="layoutCv"></canvas>
+      </div>
+      <div class="legend">
+        <span><i class="mat"></i>잘린 면 없이 보이는 면</span>
+        <span><i class="solid"></i>외형선 (보이는 모서리)</span>
+        <span><i class="dash"></i>숨은선 (가려진 모서리)</span>
+        <span style="color:#c77b1f">— — 연결선(같은 치수끼리 정렬)</span>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <span class="lab">입체 보기</span>
+        <div class="seg">
+          <button class="segBtn" id="btnNewShape">🎲 다른 입체</button>
+          <button class="segBtn" id="btnToggleIso" aria-pressed="true">입체도 보기</button>
+          <button class="segBtn" id="btnToggleHidden" aria-pressed="true">숨은선 표시</button>
+        </div>
+      </div>
+      <div class="paperwrap" id="isoWrap">
+        <span class="cap">입체도 (등각투상도)</span>
+        <canvas id="isoCv" style="height:210px"></canvas>
+      </div>
+
+      <div class="explain" id="learnExplain"></div>
+    </div>
+  </section>
+
+  <!-- ================= 도전/시험 공통 ================= -->
+  <section id="secQuiz" class="hidden">
+    <div class="panel">
+      <div class="prompt" id="qPrompt"></div>
+
+      <div id="qStageWrap" class="paperwrap">
+        <span class="cap" id="qStageCap"></span>
+        <canvas id="qStageCv" style="height:250px"></canvas>
+      </div>
+      <div class="legend" id="qLegend">
+        <span><i class="solid"></i>외형선</span>
+        <span><i class="dash"></i>숨은선</span>
+      </div>
+
+      <div class="choices" id="qChoices" style="margin-top:14px"></div>
+
+      <div class="btnrow">
+        <button class="btn" id="btnSubmit" disabled>제출</button>
+        <button class="btn ghost hidden" id="btnNext">다음 문제 →</button>
+        <button class="btn ghost" id="btnRestart">처음부터</button>
+      </div>
+
+      <div class="scorebar">
+        <span>문제 <b id="qRound">1</b> / <b id="qTotal">8</b></span>
+        <span>맞은 개수 <b id="qScore">0</b></span>
+        <span class="pill" id="qCombo">연속 0</span>
+      </div>
+      <div class="toast go" id="qToast">보기를 고른 뒤 <b>제출</b>을 누르세요.</div>
+      <div class="explain hidden" id="qExplain"></div>
+    </div>
+  </section>
+
+  <div class="panel" style="padding:16px 20px">
+    <div style="font-size:.84rem;color:var(--text-dim);margin-bottom:8px">🔗 이어서 학습하기 — 같은 단원의 다른 도구</div>
+    <div class="links">
+      <a href="https://hongyul67-cpu.github.io/tusang-master/" target="_blank" rel="noopener">투상도 마스터 — 개념편 (투상법 종류·배치)</a>
+      <a href="https://hongyul67-cpu.github.io/section-view-explorer/" target="_blank" rel="noopener">단면도 익스플로러 (Ⅲ-3 단면도)</a>
+      <a href="https://hongyul67-cpu.github.io/domyeon-master/" target="_blank" rel="noopener">도면읽기 마스터 (선·치수·기계요소)</a>
+    </div>
+  </div>
+</div>
+
+<footer>
+  기초제도 Ⅲ. 제도의 기본 도법 — 2. 정투상도 그리기 · 4. 특수 투상도 그리기 연계<br>
+  제작: hong · 기계 계열 특성화고 수업 보조 도구
+</footer>
+
+<script src="https://hongyul67-cpu.github.io/links/collector.js" data-tool="3면도 트레이너"></script>
+<script>
+(function(){
+"use strict";
+
+/* =========================================================
+   좌표계
+     x: 0..w-1  좌 → 우 (너비)
+     y: 0..h-1  아래 → 위 (높이)
+     z: 0..d-1  앞 → 뒤 (안쪽 길이)  ※ z=0 이 앞면
+   ========================================================= */
+const key=(x,y,z)=>x+","+y+","+z;
+function has(S,x,y,z){
+  return x>=0&&y>=0&&z>=0&&x<S.w&&y<S.h&&z<S.d&&S.cells.has(key(x,y,z));
+}
+const rnd=n=>Math.floor(Math.random()*n);
+const pick=a=>a[rnd(a.length)];
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+/* ---------- 입체 생성 ----------
+   기둥(높이) 방식: 바닥 발자국(footprint)마다 높이를 준다.
+   → 항상 연결되고 바닥에 붙어 있어 '실제 물체'처럼 보이며,
+     교과서형 계단 모양이 잘 나온다.                     */
+function shapeFromHeights(w,h,d,H){
+  const cells=new Set();
+  for(let x=0;x<w;x++)for(let z=0;z<d;z++){
+    const t=H[x][z]||0;
+    for(let y=0;y<t;y++) cells.add(key(x,y,z));
+  }
+  return {w,h,d,cells,H};
+}
+function randomShape(w,h,d){
+  for(let attempt=0;attempt<200;attempt++){
+    const H=[];
+    for(let x=0;x<w;x++){ H.push([]); for(let z=0;z<d;z++) H[x].push(0); }
+    // 발자국: 무작위 시드에서 상하좌우로 자라남 (연결 보장)
+    const foot=new Set(); let cx=rnd(w), cz=rnd(d); foot.add(cx+","+cz);
+    const target=Math.max(3,Math.round(w*d*(0.55+Math.random()*0.3)));
+    let guard=0;
+    while(foot.size<target && guard++<300){
+      const [px,pz]=pick([...foot]).split(",").map(Number);
+      const n=pick([[px+1,pz],[px-1,pz],[px,pz+1],[px,pz-1]]);
+      if(n[0]>=0&&n[1]>=0&&n[0]<w&&n[1]<d) foot.add(n[0]+","+n[1]);
+    }
+    foot.forEach(k=>{ const [x,z]=k.split(",").map(Number); H[x][z]=1+rnd(h); });
+    // 경계 상자가 딱 맞아야 치수가 의미 있음
+    let mxX=false,mnX=false,mxZ=false,mnZ=false,tall=false;
+    for(let x=0;x<w;x++)for(let z=0;z<d;z++){ if(!H[x][z])continue;
+      if(x===0)mnX=true; if(x===w-1)mxX=true; if(z===0)mnZ=true; if(z===d-1)mxZ=true;
+      if(H[x][z]===h)tall=true;
+    }
+    if(!(mnX&&mxX&&mnZ&&mxZ&&tall)) continue;
+    const S=shapeFromHeights(w,h,d,H);
+    // 너무 단순(직육면체)한 것은 제외 — 세 뷰가 모두 꽉 찬 사각형이면 재미없다
+    if(isBoring(S)) continue;
+    return S;
+  }
+  return shapeFromHeights(w,h,d,[[h]]);
+}
+function isBoring(S){
+  return ["front","top","right"].every(v=>{
+    const P=project(S,v);
+    for(let r=0;r<P.V;r++)for(let c=0;c<P.U;c++) if(!P.filled[r][c]) return false;
+    return true;
+  });
+}
+function cloneH(H){ return H.map(r=>r.slice()); }
+
+/* ---------- 투상(정투상) ----------
+   front : u=x,        v=h-1-y,  깊이=z
+   top   : u=x,        v=d-1-z,  깊이=h-1-y   (평면도)
+   right : u=z,        v=h-1-y,  깊이=w-1-x   (우측면도)
+   ※ 제1각법도 '그림'은 동일하고 배치만 반대다.            */
+const VIEWS={
+  front:{ name:"정면도", U:S=>S.w, V:S=>S.h, D:S=>S.d,
+          at:(S,u,v,k)=>has(S,u,S.h-1-v,k) },
+  top:  { name:"평면도", U:S=>S.w, V:S=>S.d, D:S=>S.h,
+          at:(S,u,v,k)=>has(S,u,S.h-1-k,S.d-1-v) },
+  right:{ name:"우측면도", U:S=>S.d, V:S=>S.h, D:S=>S.w,
+          at:(S,u,v,k)=>has(S,S.w-1-k,S.h-1-v,u) }
+};
+function project(S,vid){
+  const V=VIEWS[vid], U=V.U(S), Vv=V.V(S), D=V.D(S);
+  const col=(u,v)=>{ // 깊이 방향 점유 배열 (바깥은 전부 비어 있음)
+    const a=new Array(D).fill(false);
+    if(u<0||v<0||u>=U||v>=Vv) return a;
+    for(let k=0;k<D;k++) a[k]=!!V.at(S,u,v,k);
+    return a;
+  };
+  const filled=[],frontD=[];
+  for(let v=0;v<Vv;v++){ filled.push([]); frontD.push([]);
+    for(let u=0;u<U;u++){ const c=col(u,v); let f=-1;
+      for(let k=0;k<D;k++) if(c[k]){f=k;break;}
+      filled[v].push(f>=0); frontD[v].push(f);
+    }
+  }
+  // 모서리: 인접한 두 칸의 깊이 점유가 처음으로 달라지는 지점
+  const edges=[];
+  function edge(uA,vA,uB,vB,x1,y1,x2,y2){
+    const A=col(uA,vA), B=col(uB,vB);
+    let d0=-1; for(let k=0;k<D;k++) if(A[k]!==B[k]){d0=k;break;}
+    if(d0<0) return;
+    let blocked=false; for(let k=0;k<d0;k++) if(A[k]){blocked=true;break;}
+    edges.push({x1,y1,x2,y2,hidden:blocked});
+  }
+  for(let v=0;v<Vv;v++) for(let u=-1;u<U;u++) edge(u,v,u+1,v, u+1,v, u+1,v+1);   // 세로선
+  for(let u=0;u<U;u++) for(let v=-1;v<Vv;v++) edge(u,v,u,v+1, u,v+1, u+1,v+1);   // 가로선
+  return {U,V:Vv,D,filled,frontD,edges,name:VIEWS[vid].name,id:vid};
+}
+function viewSig(P){ // 뷰 동일성 비교용 서명
+  let s=P.U+"x"+P.V+"|";
+  for(let v=0;v<P.V;v++)for(let u=0;u<P.U;u++) s+=P.filled[v][u]?"1":"0";
+  s+="|"+P.edges.filter(e=>e.hidden).length;
+  return s;
+}
+function shapeSig(S){ return ["front","top","right"].map(v=>viewSig(project(S,v))).join("#"); }
+
+/* ---------- 캔버스 기본 ---------- */
+function fit(cv,cssH){
+  const r=cv.getBoundingClientRect(), dpr=Math.min(devicePixelRatio||1,2);
+  const w=Math.max(10,r.width), h=cssH||Math.max(10,r.height);
+  cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr);
+  const c=cv.getContext("2d"); c.setTransform(dpr,0,0,dpr,0,0);
+  c.clearRect(0,0,w,h);
+  return {c,w,h};
+}
+const INK="#1c3247", HID="#7f93a8", MAT="#e7dec6", GUIDE="#c77b1f";
+
+function drawView(c,P,ox,oy,s,opt){
+  opt=opt||{};
+  // 재료 면
+  c.fillStyle=opt.fill||MAT;
+  for(let v=0;v<P.V;v++)for(let u=0;u<P.U;u++)
+    if(P.filled[v][u]) c.fillRect(ox+u*s,oy+v*s,s+.5,s+.5);
+  // 숨은선
+  if(opt.hidden!==false){
+    c.save(); c.strokeStyle=HID; c.lineWidth=1.4; c.setLineDash([5,3.5]);
+    c.beginPath();
+    P.edges.forEach(e=>{ if(!e.hidden) return;
+      c.moveTo(ox+e.x1*s,oy+e.y1*s); c.lineTo(ox+e.x2*s,oy+e.y2*s); });
+    c.stroke(); c.restore();
+  }
+  // 외형선
+  c.strokeStyle=opt.stroke||INK; c.lineWidth=opt.lw||2.2; c.lineCap="square";
+  c.beginPath();
+  P.edges.forEach(e=>{ if(e.hidden) return;
+    c.moveTo(ox+e.x1*s,oy+e.y1*s); c.lineTo(ox+e.x2*s,oy+e.y2*s); });
+  c.stroke();
+}
+function viewBox(P,s){ return {w:P.U*s,h:P.V*s}; }
+
+/* ---------- 3면도 배치(핵심 교육 화면) ---------- */
+function drawLayout(cv,S,method,opt){
+  opt=opt||{};
+  const {c,w,h}=fit(cv);
+  const F=project(S,"front"), T=project(S,"top"), R=project(S,"right");
+  const gap=1.15;                                   // 뷰 사이 간격(칸 단위)
+  const cols=S.w+gap+S.d, rows=S.d+gap+S.h;
+  const pad=44;
+  const s=Math.max(6,Math.min((w-pad*2)/cols,(h-pad*2)/rows));
+  const totW=cols*s, totH=rows*s;
+  const bx=(w-totW)/2, by=(h-totH)/2;
+
+  const third = method!=="first";
+  // 정면도는 항상 좌측 하단 기준
+  const fx=bx, fy=by+(S.d+gap)*s;                   // 3각법: 평면도가 위
+  const pos={
+    front:{x:fx,y:fy,P:F},
+    top:  third? {x:fx, y:by, P:T} : {x:fx, y:fy+(S.h+gap)*s, P:T},
+    right:third? {x:fx+(S.w+gap)*s, y:fy, P:R} : {x:fx-(S.d+gap)*s, y:fy, P:R}
+  };
+  // 1각법일 때 전체를 다시 중앙정렬
+  if(!third){
+    const minX=Math.min(pos.front.x,pos.right.x), maxX=Math.max(pos.front.x+S.w*s,pos.right.x+S.d*s);
+    const minY=Math.min(pos.front.y,pos.top.y),  maxY=Math.max(pos.front.y+S.h*s,pos.top.y+S.d*s);
+    const dx=(w-(maxX-minX))/2-minX, dy=(h-(maxY-minY))/2-minY;
+    Object.values(pos).forEach(p=>{p.x+=dx;p.y+=dy;});
+  }
+  // 연결선(같은 치수끼리 정렬됨을 보여줌)
+  if(opt.guides!==false){
+    c.save(); c.strokeStyle=GUIDE; c.lineWidth=1; c.setLineDash([4,4]); c.globalAlpha=.75;
+    c.beginPath();
+    const f=pos.front,t=pos.top,r=pos.right;
+    [0,S.w].forEach(k=>{ const x=f.x+k*s;            // 정면↔평면 : 너비 공유
+      c.moveTo(x,Math.min(f.y,t.y)-10); c.lineTo(x,Math.max(f.y+S.h*s,t.y+S.d*s)+10); });
+    [0,S.h].forEach(k=>{ const y=f.y+k*s;            // 정면↔우측면 : 높이 공유
+      c.moveTo(Math.min(f.x,r.x)-10,y); c.lineTo(Math.max(f.x+S.w*s,r.x+S.d*s)+10,y); });
+    c.stroke(); c.restore();
+  }
+  // 각 뷰
+  Object.keys(pos).forEach(k=>{
+    const p=pos[k];
+    drawView(c,p.P,p.x,p.y,s,{hidden:opt.hidden});
+    c.fillStyle="#5b7286"; c.font="600 11px ui-monospace,monospace";
+    c.fillText(p.P.name,p.x,p.y-6);
+  });
+  // 각법 표시
+  c.fillStyle=GUIDE; c.font="700 12px ui-monospace,monospace";
+  c.fillText(third?"제3각법 (KS 표준)":"제1각법", 6, h-6);
+  drawAngleSymbol(c,w-58,h-34,26,third);
+  return pos;
+}
+
+/* 투상법 기호(원뿔대) — 3각법: 작은 원이 바깥쪽 */
+function drawAngleSymbol(c,x,y,sz,third){
+  const hh=sz*0.62, r1=hh*0.5, r2=hh*0.28;
+  c.save(); c.translate(x,y); c.strokeStyle=INK; c.lineWidth=1.5; c.fillStyle="rgba(0,0,0,0)";
+  // 사다리꼴(원뿔대 측면도) : 왼쪽 큰지름 → 오른쪽 작은지름
+  const L=third? -sz*0.5 : sz*0.5, Rr=third? sz*0.5 : -sz*0.5;
+  c.beginPath(); c.moveTo(L,-r1); c.lineTo(Rr,-r2); c.lineTo(Rr,r2); c.lineTo(L,r1); c.closePath(); c.stroke();
+  // 원 두 개(정면도)
+  c.beginPath(); c.ellipse(third? sz*0.95:-sz*0.95,0,r2*0.9,r2*0.9,0,0,7); c.stroke();
+  c.beginPath(); c.ellipse(third? sz*0.95:-sz*0.95,0,r1*0.9,r1*0.9,0,0,7); c.stroke();
+  c.restore();
+}
+
+/* ---------- 등각투상도(입체도) ---------- */
+function drawIso(cv,S,opt){
+  opt=opt||{};
+  const {c,w,h}=fit(cv);
+  const K=Math.cos(Math.PI/6), Ky=0.5;
+  const spanX=(S.w+S.d)*K, spanY=(S.w+S.d)*Ky+S.h;
+  const s=Math.max(5,Math.min((w-30)/spanX,(h-26)/spanY));
+  const cx=w/2+(S.d-S.w)*K*s/2, cy=h/2+((S.w+S.d)*Ky+S.h)*s/2-S.h*s*0;
+  const P=(x,y,z)=>[cx+(x-z)*K*s, cy-(y*s)-((x+z)*Ky*s)+ (S.d)*Ky*s*0];
+  // 중심 보정
+  let mnX=1e9,mxX=-1e9,mnY=1e9,mxY=-1e9;
+  for(let x=0;x<=S.w;x++)for(let y=0;y<=S.h;y++)for(let z=0;z<=S.d;z++){
+    const p=P(x,y,z); mnX=Math.min(mnX,p[0]);mxX=Math.max(mxX,p[0]);mnY=Math.min(mnY,p[1]);mxY=Math.max(mxY,p[1]);
+  }
+  const ax=(w-(mxX-mnX))/2-mnX, ay=(h-(mxY-mnY))/2-mnY;
+  const Q=(x,y,z)=>{const p=P(x,y,z);return [p[0]+ax,p[1]+ay];};
+
+  const list=[];
+  for(let x=0;x<S.w;x++)for(let y=0;y<S.h;y++)for(let z=0;z<S.d;z++)
+    if(has(S,x,y,z)) list.push([x,y,z]);
+  list.sort((a,b)=>((a[0]+a[1]+(S.d-1-a[2]))-(b[0]+b[1]+(S.d-1-b[2]))));
+
+  const face=(pts,fill)=>{
+    c.beginPath(); c.moveTo(pts[0][0],pts[0][1]);
+    for(let i=1;i<pts.length;i++) c.lineTo(pts[i][0],pts[i][1]);
+    c.closePath(); c.fillStyle=fill; c.fill();
+    c.strokeStyle=INK; c.lineWidth=1.15; c.stroke();
+  };
+  list.forEach(([x,y,z])=>{
+    if(!has(S,x,y+1,z)) face([Q(x,y+1,z),Q(x+1,y+1,z),Q(x+1,y+1,z+1),Q(x,y+1,z+1)],"#f3ecd9"); // 윗면
+    if(!has(S,x,y,z-1)) face([Q(x,y,z),Q(x+1,y,z),Q(x+1,y+1,z),Q(x,y+1,z)],"#e2d7bb");         // 앞면
+    if(!has(S,x+1,y,z)) face([Q(x+1,y,z),Q(x+1,y,z+1),Q(x+1,y+1,z+1),Q(x+1,y+1,z)],"#cfc2a3");  // 오른면
+  });
+  if(opt.axis!==false){
+    c.fillStyle="#5b7286"; c.font="600 10.5px ui-monospace,monospace";
+    c.fillText("↙ 앞(정면)",8,h-8);
+  }
+}
+
+/* =========================================================
+   배우기
+   ========================================================= */
+let method="third", learnShape=null, showIso=true, showHidden=true;
+const layoutCv=document.getElementById("layoutCv"), isoCv=document.getElementById("isoCv");
+const methodHint=document.getElementById("methodHint"), layoutCap=document.getElementById("layoutCap");
+const learnExplain=document.getElementById("learnExplain");
+
+function newLearnShape(){ learnShape=randomShape(3,3,3); renderLearn(); }
+function renderLearn(){
+  if(!learnShape) return;
+  drawLayout(layoutCv,learnShape,method,{hidden:showHidden});
+  if(showIso) drawIso(isoCv,learnShape);
+  layoutCap.textContent = method==="third" ? "제3각법 배치" : "제1각법 배치";
+  methodHint.innerHTML = method==="third"
+    ? "눈 → <b>투상면</b> → 물체. 본 쪽에 그리므로 <b>평면도가 위</b>, <b>우측면도가 오른쪽</b>. KS 표준입니다."
+    : "눈 → 물체 → <b>투상면</b>. 물체 너머에 그리므로 <b>평면도가 아래</b>, <b>우측면도가 왼쪽</b>으로 3각법과 반대입니다.";
+  const S=learnShape;
+  learnExplain.innerHTML =
+    "<b>세 투상도는 서로 치수를 공유합니다.</b> 정면도와 평면도는 <b>너비("+S.w+"칸)</b>가 같고, "+
+    "정면도와 우측면도는 <b>높이("+S.h+"칸)</b>가 같으며, 평면도와 우측면도는 <b>안쪽 길이("+S.d+"칸)</b>가 같습니다. "+
+    "주황 점선(연결선)이 이 정렬을 보여줍니다. 가려져 보이지 않는 모서리는 <b>숨은선(파선)</b>으로 그립니다.";
+}
+document.getElementById("methodSeg").addEventListener("click",e=>{
+  const b=e.target.closest(".segBtn"); if(!b) return;
+  method=b.dataset.m;
+  document.querySelectorAll("#methodSeg .segBtn").forEach(x=>x.setAttribute("aria-pressed",x===b));
+  renderLearn();
+});
+document.getElementById("btnNewShape").onclick=newLearnShape;
+document.getElementById("btnToggleIso").onclick=function(){
+  showIso=!showIso; this.setAttribute("aria-pressed",showIso);
+  document.getElementById("isoWrap").classList.toggle("hidden",!showIso);
+  if(showIso) drawIso(isoCv,learnShape);
+};
+document.getElementById("btnToggleHidden").onclick=function(){
+  showHidden=!showHidden; this.setAttribute("aria-pressed",showHidden); renderLearn();
+};
+
+/* =========================================================
+   문제 생성
+   ========================================================= */
+function mutate(S){                       // 기둥 높이를 하나 바꿔 '그럴듯한 오답' 만들기
+  for(let t=0;t<80;t++){
+    const H=cloneH(S.H), x=rnd(S.w), z=rnd(S.d);
+    const cur=H[x][z];
+    const nv=pick([0,1,2,3].filter(v=>v!==cur&&v<=S.h));
+    H[x][z]=nv;
+    let any=false; for(let i=0;i<S.w;i++)for(let j=0;j<S.d;j++) if(H[i][j])any=true;
+    if(!any) continue;
+    const M=shapeFromHeights(S.w,S.h,S.d,H);
+    if(shapeSig(M)!==shapeSig(S)) return M;
+  }
+  return null;
+}
+function distractShapes(S,n){
+  const out=[],seen=new Set([shapeSig(S)]);
+  for(let t=0;t<300&&out.length<n;t++){
+    const M=mutate(S); if(!M) continue;
+    const sg=shapeSig(M); if(seen.has(sg)) continue;
+    seen.add(sg); out.push(M);
+  }
+  return out;
+}
+
+/* =========================================================
+   퀴즈 엔진
+   ========================================================= */
+const QTYPES={TO_SOLID:"toSolid",TO_VIEW:"toView",ANGLE:"angle"};
+let quiz={type:null,total:8,round:1,score:0,combo:0,best:0,answered:false,sel:null,q:null,log:[],started:0};
+
+const el=id=>document.getElementById(id);
+const qPrompt=el("qPrompt"), qChoices=el("qChoices"), qStageCv=el("qStageCv"),
+      qStageCap=el("qStageCap"), qStageWrap=el("qStageWrap"), qToast=el("qToast"),
+      qExplain=el("qExplain"), btnSubmit=el("btnSubmit"), btnNext=el("btnNext"), qLegend=el("qLegend");
+
+function makeQuestion(type){
+  if(type===QTYPES.ANGLE) return makeAngleQ();
+  const S=randomShape(3,3,3);
+  if(type===QTYPES.TO_SOLID){
+    const wrongs=distractShapes(S,3);
+    if(wrongs.length<3) return makeQuestion(type);
+    const opts=shuffle([{S,ok:true},...wrongs.map(m=>({S:m,ok:false}))]);
+    return {type,S,opts,answer:opts.findIndex(o=>o.ok),
+      prompt:"제3각법으로 그린 <b>3면도</b>입니다. 이 도면이 나타내는 <b>입체</b>를 고르세요.",
+      cap:"제3각법 3면도"};
+  }
+  // TO_VIEW : 입체를 보여주고 특정 투상도 고르기
+  const vid=pick(["front","top","right"]);
+  const correct=project(S,vid);
+  const cand=[], seen=new Set([viewSig(correct)]);
+  ["front","top","right"].forEach(o=>{ if(o===vid) return;   // 다른 방향 뷰 = 최고의 오답
+    const P=project(S,o); const sg=viewSig(P);
+    if(!seen.has(sg)){seen.add(sg);cand.push(P);} });
+  distractShapes(S,6).forEach(m=>{                            // 모양이 조금 다른 입체의 같은 방향 뷰
+    if(cand.length>=3) return;
+    const P=project(m,vid), sg=viewSig(P);
+    if(!seen.has(sg)){seen.add(sg);cand.push(P);} });
+  if(cand.length<3) return makeQuestion(type);
+  const opts=shuffle([{P:correct,ok:true},...cand.slice(0,3).map(P=>({P,ok:false}))]);
+  return {type,S,vid,opts,answer:opts.findIndex(o=>o.ok),
+    prompt:"이 입체를 <b>"+VIEWS[vid].name+"</b> 방향에서 본 투상도를 고르세요.",
+    cap:"입체도 (등각투상도)"};
+}
+function makeAngleQ(){
+  const S=randomShape(3,3,3), m=pick(["third","first"]);
+  const opts=shuffle([
+    {t:"제3각법",ok:m==="third"},{t:"제1각법",ok:m!=="third"},
+    {t:"등각투상법",ok:false},{t:"사투상법",ok:false}
+  ]);
+  return {type:QTYPES.ANGLE,S,method:m,opts,answer:opts.findIndex(o=>o.ok),
+    prompt:"아래 <b>세 투상도의 배치</b>를 보고, 어떤 투상법으로 그린 것인지 고르세요.",
+    cap:"투상도 배치"};
+}
+
+function renderQuestion(){
+  const q=quiz.q;
+  qPrompt.innerHTML=q.prompt;
+  qStageCap.textContent=q.cap;
+  qStageWrap.classList.remove("hidden");
+  qLegend.classList.toggle("hidden", q.type===QTYPES.TO_VIEW);
+
+  if(q.type===QTYPES.TO_SOLID)      drawLayout(qStageCv,q.S,"third",{hidden:true});
+  else if(q.type===QTYPES.TO_VIEW)  drawIso(qStageCv,q.S);
+  else                              drawLayout(qStageCv,q.S,q.method,{hidden:true,guides:false});
+
+  qChoices.innerHTML="";
+  const paint=[];                       // DOM 에 붙인 뒤 그린다(레이아웃 확정 후)
+  q.opts.forEach((o,i)=>{
+    const b=document.createElement("button");
+    b.className="choice"; b.type="button"; b.dataset.i=i;
+    const num=document.createElement("span"); num.className="num"; num.textContent="①②③④"[i]; b.appendChild(num);
+    if(q.type===QTYPES.ANGLE){
+      const t=document.createElement("div");
+      t.style.cssText="font-weight:800;color:#1c3247;font-size:1rem;padding:26px 4px 30px";
+      t.textContent=o.t; b.appendChild(t);
+    }else{
+      const cv=document.createElement("canvas"); b.appendChild(cv);
+      paint.push(()=>{
+        if(q.type===QTYPES.TO_SOLID) drawIso(cv,o.S,{axis:false});
+        else{ const {c,w,h}=fit(cv); const P=o.P;
+          const s=Math.min((w-26)/P.U,(h-22)/P.V);
+          drawView(c,P,(w-P.U*s)/2,(h-P.V*s)/2,s,{}); }
+      });
+    }
+    b.onclick=()=>{ if(quiz.answered) return;
+      quiz.sel=i; btnSubmit.disabled=false;
+      qChoices.querySelectorAll(".choice").forEach(x=>x.classList.toggle("sel",x===b)); };
+    qChoices.appendChild(b);
+  });
+  // getBoundingClientRect() 가 레이아웃을 강제하므로 즉시 그려도 크기가 정확하다.
+  // (rAF 에 의존하면 백그라운드 탭에서 그려지지 않음)
+  paint.forEach(fn=>fn());
+  quiz.answered=false; quiz.sel=null;
+  btnSubmit.disabled=true; btnSubmit.classList.remove("hidden");
+  btnNext.classList.add("hidden");
+  qExplain.classList.add("hidden");
+  qToast.className="toast go"; qToast.innerHTML="보기를 고른 뒤 <b>제출</b>을 누르세요.";
+  el("qRound").textContent=quiz.round; el("qTotal").textContent=quiz.total;
+  el("qScore").textContent=quiz.score; el("qCombo").textContent="연속 "+quiz.combo;
+}
+function submitAnswer(){
+  if(quiz.answered||quiz.sel==null) return;
+  quiz.answered=true;
+  const q=quiz.q, ok=quiz.sel===q.answer;
+  if(ok){ quiz.score++; quiz.combo++; quiz.best=Math.max(quiz.best,quiz.combo); }
+  else quiz.combo=0;
+  quiz.log.push({round:quiz.round,ok});
+  qChoices.querySelectorAll(".choice").forEach((b,i)=>{
+    b.disabled=true; b.classList.remove("sel");
+    if(i===q.answer) b.classList.add("correct");
+    else if(i===quiz.sel) b.classList.add("wrong");
+  });
+  el("qScore").textContent=quiz.score; el("qCombo").textContent="연속 "+quiz.combo;
+  qToast.className="toast "+(ok?"ok":"no");
+  qToast.textContent=ok?(quiz.combo>=3?"정답! "+quiz.combo+"연속 🔥":"정답이에요!"):"아쉬워요. 정답은 "+"①②③④"[q.answer]+"번.";
+  qExplain.innerHTML=explainOf(q); qExplain.classList.remove("hidden");
+  btnSubmit.classList.add("hidden"); btnNext.classList.remove("hidden");
+  btnNext.textContent = quiz.round>=quiz.total ? "결과 보기 →" : "다음 문제 →";
+}
+function explainOf(q){
+  const S=q.S;
+  if(q.type===QTYPES.TO_SOLID)
+    return "<b>읽는 순서</b> — ① 정면도로 <b>너비×높이</b>를, ② 평면도로 <b>너비×안쪽 길이</b>를, "+
+      "③ 우측면도로 <b>안쪽 길이×높이</b>를 확인합니다. 이 입체는 너비 "+S.w+", 높이 "+S.h+", 안쪽 길이 "+S.d+
+      " 칸 안에 들어갑니다. 세 투상도에 <b>모두</b> 맞는 입체를 골라야 합니다.";
+  if(q.type===QTYPES.TO_VIEW){
+    const t={front:"앞에서 본 모양 — 너비×높이",top:"위에서 내려다본 모양 — 너비×안쪽 길이",
+             right:"오른쪽에서 본 모양 — 안쪽 길이×높이"}[q.vid];
+    return "<b>"+VIEWS[q.vid].name+"</b>는 "+t+"입니다. 방향이 다른 투상도를 고르면 가로·세로 치수가 어긋납니다. "+
+      "가려져 보이지 않는 모서리가 있으면 <b>숨은선(파선)</b>으로 나타냅니다.";
+  }
+  return q.method==="third"
+    ? "<b>제3각법</b>입니다. 평면도가 <b>위</b>, 우측면도가 <b>오른쪽</b>에 놓입니다. 눈 → 투상면 → 물체 순서이며 KS 표준입니다."
+    : "<b>제1각법</b>입니다. 평면도가 <b>아래</b>, 우측면도가 <b>왼쪽</b>에 놓여 3각법과 반대입니다. 눈 → 물체 → 투상면 순서입니다.";
+}
+
+function startQuiz(type,total){
+  quiz={type,total:total||8,round:1,score:0,combo:0,best:0,answered:false,sel:null,q:null,log:[],started:Date.now()};
+  quiz.q=nextQ(); renderQuestion();
+}
+function nextQ(){
+  return makeQuestion(quiz.type==="exam"
+    ? pick([QTYPES.TO_SOLID,QTYPES.TO_VIEW,QTYPES.ANGLE])
+    : quiz.type);
+}
+btnSubmit.onclick=submitAnswer;
+btnNext.onclick=()=>{
+  if(quiz.round>=quiz.total){ finishQuiz(); return; }
+  quiz.round++; quiz.q=nextQ(); renderQuestion();
+};
+el("btnRestart").onclick=()=>startQuiz(quiz.type,quiz.total);
+
+function finishQuiz(){
+  const pct=Math.round(quiz.score/quiz.total*100);
+  const sec=Math.round((Date.now()-quiz.started)/1000);
+  qStageWrap.classList.add("hidden"); qLegend.classList.add("hidden"); qChoices.innerHTML="";
+  qPrompt.innerHTML="🎉 <b>"+quiz.total+"문제 완료!</b>";
+  qToast.className="toast "+(pct>=80?"ok":pct>=60?"go":"no");
+  qToast.textContent=pct+"점 · "+quiz.score+"/"+quiz.total+" 정답 · 최고 "+quiz.best+"연속 · "+sec+"초";
+  qExplain.classList.remove("hidden");
+  qExplain.innerHTML = pct>=80 ? "훌륭합니다! 세 투상도의 치수 공유 관계를 잘 이해했습니다."
+    : pct>=60 ? "좋아요. <b>배우기</b>에서 연결선(주황 점선)을 다시 확인하면 더 정확해집니다."
+    : "<b>배우기</b> 탭에서 입체를 바꿔가며 3면도가 어떻게 달라지는지 먼저 관찰해 보세요.";
+  btnSubmit.classList.add("hidden"); btnNext.classList.add("hidden");
+
+  // 결과 제출 (선생님 시트로) — ?rc=<Apps Script URL> 이 있을 때 동작
+  if(window.ResultCollector && quiz.type==="exam"){
+    const wrong=quiz.log.filter(r=>!r.ok).map(r=>r.round);
+    try{ ResultCollector.open({score:pct,correct:quiz.score,total:quiz.total,wrong,durationSec:sec}); }catch(e){}
+  }
+}
+
+/* =========================================================
+   탭
+   ========================================================= */
+const TABS=[["tabLearn","learn"],["tabToSolid",QTYPES.TO_SOLID],["tabToView",QTYPES.TO_VIEW],
+            ["tabAngle",QTYPES.ANGLE],["tabExam","exam"]];
+function setMode(m){
+  TABS.forEach(([id,v])=>el(id).setAttribute("aria-pressed",v===m));
+  const learn=m==="learn";
+  el("secLearn").classList.toggle("hidden",!learn);
+  el("secQuiz").classList.toggle("hidden",learn);
+  if(learn){ if(!learnShape) newLearnShape(); else renderLearn(); }
+  else startQuiz(m, m==="exam"?10:8);
+}
+TABS.forEach(([id,v])=>el(id).onclick=()=>setMode(v));
+
+let rt=null;
+addEventListener("resize",()=>{ clearTimeout(rt); rt=setTimeout(()=>{
+  if(el("secLearn").classList.contains("hidden")){ if(quiz.q&&!qStageWrap.classList.contains("hidden")) renderQuestion(); }
+  else renderLearn();
+},180); });
+
+newLearnShape();
+setMode("learn");
+})();
+</script>
+</body>
+</html>
