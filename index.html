@@ -507,18 +507,50 @@ function drawIso(cv,S,opt){
   const list=[];
   for(let x=0;x<S.w;x++)for(let y=0;y<S.h;y++)for(let z=0;z<S.d;z++)
     if(has(S,x,y,z)) list.push([x,y,z]);
-  list.sort((a,b)=>((a[0]+a[1]+(S.d-1-a[2]))-(b[0]+b[1]+(S.d-1-b[2]))));
+  list.sort((a,b)=>((b[0]+b[2])-(a[0]+a[2])) || (a[1]-b[1]));   // 먼 것부터
 
-  const face=(pts,fill)=>{
+  /* 칸마다 면 테두리를 그리면 표면이 격자 뼈대처럼 보여 솔리드가 아니라
+     속 빈 서피스처럼 읽힌다. 면은 선 없이 칠하고, 선은 옆 칸에 같은 방향의
+     면이 없는 자리(=진짜 모서리)에만 긋는다. */
+  const fill=(pts,col)=>{
     c.beginPath(); c.moveTo(pts[0][0],pts[0][1]);
     for(let i=1;i<pts.length;i++) c.lineTo(pts[i][0],pts[i][1]);
-    c.closePath(); c.fillStyle=fill; c.fill();
-    c.strokeStyle=INK; c.lineWidth=1.15; c.stroke();
+    c.closePath(); c.fillStyle=col; c.fill();
   };
+  const seg=(a,b)=>{ c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(b[0],b[1]); c.stroke(); };
+  const topAt  =(x,y,z)=> has(S,x,y,z) && !has(S,x,y+1,z);
+  const frontAt=(x,y,z)=> has(S,x,y,z) && !has(S,x,y,z-1);
+  const leftAt =(x,y,z)=> has(S,x,y,z) && !has(S,x-1,y,z);
+
   list.forEach(([x,y,z])=>{
-    if(!has(S,x,y+1,z)) face([Q(x,y+1,z),Q(x+1,y+1,z),Q(x+1,y+1,z+1),Q(x,y+1,z+1)],"#f3ecd9"); // 윗면
-    if(!has(S,x,y,z-1)) face([Q(x,y,z),Q(x+1,y,z),Q(x+1,y+1,z),Q(x,y+1,z)],"#e2d7bb");         // 앞면
-    if(!has(S,x+1,y,z)) face([Q(x+1,y,z),Q(x+1,y,z+1),Q(x+1,y+1,z+1),Q(x+1,y+1,z)],"#cfc2a3");  // 오른면
+    if(topAt(x,y,z))   fill([Q(x,y+1,z),Q(x+1,y+1,z),Q(x+1,y+1,z+1),Q(x,y+1,z+1)],"#f3ecd9");
+    if(frontAt(x,y,z)) fill([Q(x,y,z),Q(x+1,y,z),Q(x+1,y+1,z),Q(x,y+1,z)],"#e2d7bb");
+    if(leftAt(x,y,z))  fill([Q(x,y,z),Q(x,y,z+1),Q(x,y+1,z+1),Q(x,y+1,z)],"#cfc2a3");
+  });
+
+  c.strokeStyle=INK; c.lineWidth=1.15; c.lineCap="round";
+  list.forEach(([x,y,z])=>{
+    if(topAt(x,y,z)){
+      const A=Q(x,y+1,z),B=Q(x+1,y+1,z),C=Q(x+1,y+1,z+1),D=Q(x,y+1,z+1);
+      if(!topAt(x,y,z-1)) seg(A,B);
+      if(!topAt(x+1,y,z)) seg(B,C);
+      if(!topAt(x,y,z+1)) seg(C,D);
+      if(!topAt(x-1,y,z)) seg(D,A);
+    }
+    if(frontAt(x,y,z)){
+      const A=Q(x,y,z),B=Q(x+1,y,z),C=Q(x+1,y+1,z),D=Q(x,y+1,z);
+      if(!frontAt(x,y-1,z)) seg(A,B);
+      if(!frontAt(x+1,y,z)) seg(B,C);
+      if(!frontAt(x,y+1,z)) seg(C,D);
+      if(!frontAt(x-1,y,z)) seg(D,A);
+    }
+    if(leftAt(x,y,z)){
+      const A=Q(x,y,z),B=Q(x,y,z+1),C=Q(x,y+1,z+1),D=Q(x,y+1,z);
+      if(!leftAt(x,y-1,z)) seg(A,B);
+      if(!leftAt(x,y,z+1)) seg(B,C);
+      if(!leftAt(x,y+1,z)) seg(C,D);
+      if(!leftAt(x,y,z-1)) seg(D,A);
+    }
   });
   if(opt.axis!==false){
     c.fillStyle="#5b7286"; c.font="600 10.5px ui-monospace,monospace";
