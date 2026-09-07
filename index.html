@@ -553,14 +553,30 @@ function drawIso(cv,S,opt){
   const frontAt=(x,y,z)=> has(S,x,y,z) && !has(S,x,y,z-1);
   const leftAt =(x,y,z)=> has(S,x,y,z) && !has(S,x-1,y,z);
 
-  list.forEach(([x,y,z])=>{
-    if(topAt(x,y,z))   fill([Q(x,y+1,z),Q(x+1,y+1,z),Q(x+1,y+1,z+1),Q(x,y+1,z+1)],"#f3ecd9");
-    if(frontAt(x,y,z)) fill([Q(x,y,z),Q(x+1,y,z),Q(x+1,y+1,z),Q(x,y+1,z)],"#e2d7bb");
-    if(leftAt(x,y,z))  fill([Q(x,y,z),Q(x,y,z+1),Q(x,y+1,z+1),Q(x,y+1,z)],"#cfc2a3");
-  });
+  /* ── 칠하기와 선 긋기를 **한 칸씩 번갈아** 한다 ──
+     예전에는 모든 면을 먼저 칠하고 그 뒤에 모든 선을 한꺼번에 그었다.
+     그러면 **뒤에 있는 칸의 모서리가 앞 칸의 면 위에 그려져서**, 보이지 않아야 할
+     선이 비쳐 나온다(입체가 속이 비어 보이고 어느 것이 앞인지 헷갈린다).
+     화가 알고리즘은 먼 것부터 「칠하고 곧바로 선까지」 그어야 한다 —
+     그래야 가까운 칸의 면이 먼 칸의 선을 덮는다.
 
-  c.strokeStyle=INK; c.lineWidth=1.15; c.lineCap="round";
+     칠할 때 같은 색으로 테두리도 한 번 긋는다. 칸마다 따로 칠하면 맞닿은
+     자리에 1px 짜리 틈(안티에일리어싱)이 남아 없는 선이 있는 것처럼 보인다. */
+  const face=(pts,col)=>{
+    fill(pts,col);
+    c.save(); c.strokeStyle=col; c.lineWidth=1; c.lineJoin="round";
+    c.beginPath(); c.moveTo(pts[0][0],pts[0][1]);
+    for(let i=1;i<pts.length;i++) c.lineTo(pts[i][0],pts[i][1]);
+    c.closePath(); c.stroke(); c.restore();
+  };
+
   list.forEach(([x,y,z])=>{
+    if(topAt(x,y,z))   face([Q(x,y+1,z),Q(x+1,y+1,z),Q(x+1,y+1,z+1),Q(x,y+1,z+1)],"#f3ecd9");
+    if(frontAt(x,y,z)) face([Q(x,y,z),Q(x+1,y,z),Q(x+1,y+1,z),Q(x,y+1,z)],"#e2d7bb");
+    if(leftAt(x,y,z))  face([Q(x,y,z),Q(x,y,z+1),Q(x,y+1,z+1),Q(x,y+1,z)],"#cfc2a3");
+
+    c.save();
+    c.strokeStyle=INK; c.lineWidth=1.15; c.lineCap="round";
     if(topAt(x,y,z)){
       const A=Q(x,y+1,z),B=Q(x+1,y+1,z),C=Q(x+1,y+1,z+1),D=Q(x,y+1,z+1);
       if(!topAt(x,y,z-1)) seg(A,B);
@@ -582,6 +598,7 @@ function drawIso(cv,S,opt){
       if(!leftAt(x,y+1,z)) seg(C,D);
       if(!leftAt(x,y,z-1)) seg(D,A);
     }
+    c.restore();
   });
   if(opt.axis!==false){
     c.fillStyle="#5b7286"; c.font="600 10.5px ui-monospace,monospace";
